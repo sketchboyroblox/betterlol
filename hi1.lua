@@ -687,20 +687,6 @@ local function waitForGameLoad()
     
     waitForStableConnection()
     
-    local attempts = 0
-    local characterReady = false
-    while not characterReady and attempts < 20 do
-        pcall(function()
-            if player and player.Character and player.Character:FindFirstChild("Humanoid") then
-                characterReady = true
-            end
-        end)
-        if not characterReady then
-            wait(0.1)
-            attempts = attempts + 1
-        end
-    end
-    
     local hasCharacter = false
     pcall(function()
         if player and player.Character then
@@ -708,10 +694,10 @@ local function waitForGameLoad()
         end
     end)
     
-    if not hasCharacter then
-        print("Character load failed after " .. attempts .. " attempts - continuing anyway")
-    else
+    if hasCharacter then
         print("Character loaded successfully")
+    else
+        print("Character not loaded - continuing anyway (chat is ready)")
     end
     
     applyNetworkOptimizations()
@@ -959,31 +945,6 @@ local function processMultipleUsers()
     
     print("Processing " .. #targetPlayers .. " users simultaneously")
     
-    local characterReady = false
-    pcall(function()
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            characterReady = true
-        end
-    end)
-    
-    if not characterReady then
-        print("Character not ready, waiting...")
-        local waitAttempts = 0
-        while not characterReady and waitAttempts < 20 do
-            wait(0.5)
-            pcall(function()
-                if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                    characterReady = true
-                end
-            end)
-            waitAttempts = waitAttempts + 1
-        end
-        
-        if not characterReady then
-            print("Character still not ready after 10 seconds, sending messages anyway...")
-        end
-    end
-    
     for _, targetPlayer in ipairs(targetPlayers) do
         spawn(function()
             local teleported = false
@@ -1197,26 +1158,6 @@ startSpamming = function()
             end
             
             print("Starting spam process (chat will be checked during message sending)...")
-            
-            local characterReady = false
-            local charWaitAttempts = 0
-            while not characterReady and charWaitAttempts < 15 and isRunning do
-                pcall(function()
-                    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                        characterReady = true
-                    end
-                end)
-                if not characterReady then
-                    wait(0.5)
-                    charWaitAttempts = charWaitAttempts + 1
-                end
-            end
-            
-            if characterReady then
-                print("Character ready, starting spam loop...")
-            else
-                print("Character not ready after " .. charWaitAttempts .. " attempts, continuing anyway...")
-            end
             
             local processedInThisGame = 0
             local noPlayersCount = 0
