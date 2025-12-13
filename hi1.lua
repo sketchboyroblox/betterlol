@@ -769,37 +769,49 @@ local function sendMessage(message)
     local success = false
     local attempts = 0
     
-    while not success and attempts < 10 do
+    while not success and attempts < 15 do
         local chatReady = false
+        local targetChannel = nil
+        
         pcall(function()
             if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
                 chatReady = true
+                targetChannel = TextChatService.ChatInputBarConfiguration.TargetTextChannel
             end
         end)
         
         if not chatReady then
-            wait(0.5)
+            wait(0.3)
             attempts = attempts + 1
             if attempts == 5 then
-                print("Waiting for chat to be ready...")
+                print("Waiting for chat to be ready (attempt " .. attempts .. ")...")
             end
         else
-            success = pcall(function()
-                if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
-                    TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(message)
+            local sendSuccess, sendError = pcall(function()
+                if targetChannel then
+                    targetChannel:SendAsync(message)
                     return true
                 end
             end)
             
-            if not success then
+            if sendSuccess then
+                success = true
+            else
                 attempts = attempts + 1
-                wait(0.2)
+                if attempts <= 3 then
+                    wait(0.2)
+                else
+                    wait(0.5)
+                end
+                if attempts == 10 then
+                    warn("Still trying to send message (attempt " .. attempts .. ")...")
+                end
             end
         end
     end
     
     if not success then
-        warn("Failed to send message after " .. attempts .. " attempts")
+        warn("Failed to send message after " .. attempts .. " attempts: " .. tostring(message))
     end
     
     return success
@@ -940,28 +952,65 @@ end
 local function processMultipleUsers()
     local targetPlayers = getTopThreePlayers()
     if #targetPlayers == 0 then
+        print("No players found to process")
         wait(0.5)
         return false
     end
     
     print("Processing " .. #targetPlayers .. " users simultaneously")
     
+    local characterReady = false
+    pcall(function()
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            characterReady = true
+        end
+    end)
+    
+    if not characterReady then
+        print("Character not ready, waiting...")
+        local waitAttempts = 0
+        while not characterReady and waitAttempts < 20 do
+            wait(0.5)
+            pcall(function()
+                if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    characterReady = true
+                end
+            end)
+            waitAttempts = waitAttempts + 1
+        end
+        
+        if not characterReady then
+            print("Character still not ready after 10 seconds, sending messages anyway...")
+        end
+    end
+    
     for _, targetPlayer in ipairs(targetPlayers) do
         spawn(function()
-            if instantTeleportToPlayer(targetPlayer) then
+            local teleported = false
+            pcall(function()
+                teleported = instantTeleportToPlayer(targetPlayer)
+            end)
+            
+            if teleported then
+                print("Teleported to " .. targetPlayer.Name)
                 wait(0.1)
-                
                 spinAroundPlayer(targetPlayer, 2.5)
-                
-                local selectedMessages = getRandomMessages()
-                for i, message in ipairs(selectedMessages) do
-                    if not isRunning then break end
-                    local sent = sendMessage(message)
-                    if sent then
-                        print("Sent to " .. targetPlayer.Name .. ": " .. message)
-                    end
-                    wait(math.random(0.3, 0.6))
+            else
+                print("Could not teleport to " .. targetPlayer.Name .. ", sending messages anyway")
+            end
+            
+            local selectedMessages = getRandomMessages()
+            print("Sending " .. #selectedMessages .. " messages to " .. targetPlayer.Name)
+            
+            for i, message in ipairs(selectedMessages) do
+                if not isRunning then break end
+                local sent = sendMessage(message)
+                if sent then
+                    print("Sent to " .. targetPlayer.Name .. ": " .. message)
+                else
+                    warn("Failed to send message to " .. targetPlayer.Name .. ": " .. message)
                 end
+                wait(math.random(0.3, 0.6))
             end
         end)
         wait(0.05)
@@ -1148,6 +1197,26 @@ startSpamming = function()
             end
             
             print("Starting spam process (chat will be checked during message sending)...")
+            
+            local characterReady = false
+            local charWaitAttempts = 0
+            while not characterReady and charWaitAttempts < 15 and isRunning do
+                pcall(function()
+                    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        characterReady = true
+                    end
+                end)
+                if not characterReady then
+                    wait(0.5)
+                    charWaitAttempts = charWaitAttempts + 1
+                end
+            end
+            
+            if characterReady then
+                print("Character ready, starting spam loop...")
+            else
+                print("Character not ready after " .. charWaitAttempts .. " attempts, continuing anyway...")
+            end
             
             local processedInThisGame = 0
             local noPlayersCount = 0
