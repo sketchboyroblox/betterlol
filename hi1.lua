@@ -823,59 +823,73 @@ local function stopFollowing()
     end
 end
 
+local function waitForCharacterReady(targetPlayer, isLocalPlayer)
+    local character = nil
+    local rootPart = nil
+    local attempts = 0
+    local maxAttempts = isLocalPlayer and 50 or 30
+    
+    while not rootPart and attempts < maxAttempts do
+        pcall(function()
+            if isLocalPlayer then
+                if player and player.Character then
+                    character = player.Character
+                    if character:FindFirstChild("HumanoidRootPart") then
+                        rootPart = character.HumanoidRootPart
+                        if character:FindFirstChild("Humanoid") then
+                            local humanoid = character.Humanoid
+                            if humanoid.Health > 0 then
+                                return
+                            end
+                        end
+                    end
+                end
+            else
+                if targetPlayer and targetPlayer.Character then
+                    character = targetPlayer.Character
+                    if character:FindFirstChild("HumanoidRootPart") then
+                        rootPart = character.HumanoidRootPart
+                    end
+                end
+            end
+        end)
+        
+        if not rootPart then
+            wait(0.1)
+            attempts = attempts + 1
+        end
+    end
+    
+    return rootPart
+end
+
 local function instantTeleportToPlayer(targetPlayer)
     if not targetPlayer then
         return false
     end
     
-    local targetRoot = nil
-    local attempts = 0
-    while not targetRoot and attempts < 15 do
-        pcall(function()
-            if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                targetRoot = targetPlayer.Character.HumanoidRootPart
-            end
-        end)
-        if not targetRoot then
-            wait(0.1)
-            attempts = attempts + 1
-        end
-    end
-    
+    local targetRoot = waitForCharacterReady(targetPlayer, false)
     if not targetRoot then
         return false
     end
     
-    local myRoot = nil
-    attempts = 0
-    while not myRoot and attempts < 20 do
-        pcall(function()
-            if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                myRoot = player.Character.HumanoidRootPart
-            end
-        end)
-        if not myRoot then
-            wait(0.1)
-            attempts = attempts + 1
-        end
-    end
-    
+    local myRoot = waitForCharacterReady(nil, true)
     if not myRoot then
         return false
     end
     
     local teleportSuccess = false
     pcall(function()
-        local targetPosition = targetRoot.Position
-        local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
-        
-        if myRoot and myRoot.Parent and targetRoot and targetRoot.Parent then
+        if targetRoot and targetRoot.Parent and myRoot and myRoot.Parent then
+            local targetPosition = targetRoot.Position
+            local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
+            
             myRoot.CFrame = CFrame.new(newPosition)
-            wait(0.05)
+            wait(0.1)
             
             local currentPos = myRoot.Position
             local distance = (currentPos - targetPosition).Magnitude
-            if distance < 25 then
+            if distance < 30 then
                 teleportSuccess = true
             end
         end
@@ -969,6 +983,39 @@ local function processMultipleUsers()
     end
     
     print("Processing " .. #targetPlayers .. " users simultaneously")
+    
+    local myCharacterReady = false
+    pcall(function()
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                myCharacterReady = true
+            end
+        end
+    end)
+    
+    if not myCharacterReady then
+        print("Waiting for character to be ready...")
+        local waitAttempts = 0
+        while not myCharacterReady and waitAttempts < 30 do
+            wait(0.2)
+            pcall(function()
+                if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local humanoid = player.Character:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        myCharacterReady = true
+                    end
+                end
+            end)
+            waitAttempts = waitAttempts + 1
+        end
+        
+        if myCharacterReady then
+            print("Character is now ready!")
+        else
+            print("Character still not ready after 6 seconds, attempting teleport anyway...")
+        end
+    end
     
     for _, targetPlayer in ipairs(targetPlayers) do
         spawn(function()
