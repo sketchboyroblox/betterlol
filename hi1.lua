@@ -829,34 +829,50 @@ local function instantTeleportToPlayer(targetPlayer)
     end
     
     local targetChar = nil
-    pcall(function()
-        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            targetChar = targetPlayer.Character
+    local attempts = 0
+    while not targetChar and attempts < 10 do
+        pcall(function()
+            if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                targetChar = targetPlayer.Character
+            end
+        end)
+        if not targetChar then
+            wait(0.2)
+            attempts = attempts + 1
         end
-    end)
+    end
     
     if not targetChar then
         return false
     end
     
     local character = nil
-    pcall(function()
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            character = player.Character
+    attempts = 0
+    while not character and attempts < 15 do
+        pcall(function()
+            if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                character = player.Character
+            end
+        end)
+        if not character then
+            wait(0.2)
+            attempts = attempts + 1
         end
-    end)
+    end
     
     if not character then
         return false
     end
     
+    local teleportSuccess = false
     pcall(function()
         local targetPosition = targetChar.HumanoidRootPart.Position
         local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
         character.HumanoidRootPart.CFrame = CFrame.new(newPosition)
+        teleportSuccess = true
     end)
     
-    return true
+    return teleportSuccess
 end
 
 local function spinAroundPlayer(targetPlayer, duration)
