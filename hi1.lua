@@ -86,11 +86,34 @@ local function saveScriptData()
         serverSwapEnabled = serverSwapEnabled,
         discordVanity = discordVanity
     }
-    pcall(function()
-        if writefile then
-            writefile("spammer_data.json", HttpService:JSONEncode(data))
+    
+    local success, encoded = pcall(function()
+        return HttpService:JSONEncode(data)
+    end)
+    
+    if not success then
+        warn("Failed to encode data for saving: " .. tostring(encoded))
+        return false
+    end
+    
+    local saveSuccess, saveError = pcall(function()
+        local fileFunc = writefile or (syn and syn.writefile) or (fluxus and fluxus.writefile)
+        if fileFunc then
+            fileFunc("spammer_data.json", encoded)
+            print("Data saved successfully - Vanity: " .. tostring(discordVanity) .. ", Running: " .. tostring(isRunning))
+            return true
+        else
+            warn("writefile function not available")
+            return false
         end
     end)
+    
+    if not saveSuccess then
+        warn("Failed to save data: " .. tostring(saveError))
+        return false
+    end
+    
+    return true
 end
 
 local function createModernUI()
@@ -212,10 +235,15 @@ local function createModernUI()
     vanityStroke.Parent = vanityInput
 
     vanityInput.FocusLost:Connect(function()
-        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/husband"
+        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/meh"
         pcall(function()
             if initializeMessageVariations then
                 initializeMessageVariations()
+            end
+        end)
+        pcall(function()
+            if saveScriptData then
+                saveScriptData()
             end
         end)
     end)
@@ -385,6 +413,11 @@ local function createModernUI()
             end)
             isRunning = true
             updateStatus("Running", Color3.fromRGB(50, 200, 80))
+            pcall(function()
+                if saveScriptData then
+                    saveScriptData()
+                end
+            end)
             pcall(function()
                 if startSpamming then
                     startSpamming()
@@ -593,8 +626,11 @@ end
 
 local function loadScriptData()
     local success, content = pcall(function()
-        if isfile and readfile and isfile("spammer_data.json") then
-            return readfile("spammer_data.json")
+        local fileCheck = isfile or (syn and syn.isfile) or (fluxus and fluxus.isfile)
+        local fileRead = readfile or (syn and syn.readfile) or (fluxus and fluxus.readfile)
+        
+        if fileCheck and fileRead and fileCheck("spammer_data.json") then
+            return fileRead("spammer_data.json")
         end
         return nil
     end)
@@ -615,8 +651,13 @@ local function loadScriptData()
             if data.wasRunning then
                 isRunning = true
             end
+            print("Data loaded successfully - Vanity: " .. tostring(discordVanity) .. ", Was Running: " .. tostring(data.wasRunning))
             return true, data.wasRunning or false
+        else
+            warn("Failed to decode saved data: " .. tostring(data))
         end
+    else
+        print("No saved data found or failed to read file")
     end
     
     return false, false
@@ -1057,6 +1098,11 @@ local function initialize()
     
     pcall(function()
         local dataLoaded, wasRunning = loadScriptData()
+        
+        if dataLoaded then
+            print("Loaded saved data - Vanity: " .. tostring(discordVanity) .. ", Was Running: " .. tostring(wasRunning))
+        end
+        
         initializeMessageVariations()
         
         if game.JobId and game.JobId ~= "" then
@@ -1065,7 +1111,12 @@ local function initialize()
         
         local screenGui, updateStatus, updateStats, vanityInput = createModernUI()
         
+        if dataLoaded and vanityInput then
+            vanityInput.Text = discordVanity
+        end
+        
         if wasRunning and isRunning then
+            print("Resuming spam process with vanity: " .. tostring(discordVanity))
             wait(3)
             updateStatus("Running", Color3.fromRGB(50, 200, 80))
             pcall(function()
