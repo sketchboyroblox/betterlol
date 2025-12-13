@@ -577,12 +577,12 @@ local function queueScript()
 wait(2)
 print("Auto-restarting script...")
 local success = pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/sketchboyroblox/roblox22/main/plan.lua"))()
+    loadstring(game:HttpGet("https://github.com/sketchboyroblox/betterlol/blob/main/hi1.lua"))()
 end)
 if not success then
     wait(3)
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/sketchboyroblox/roblox22/main/plan.lua"))()
+        loadstring(game:HttpGet("https://github.com/sketchboyroblox/betterlol/blob/main/hi1.lua"))()
     end)
 end
 ]])
@@ -1067,4 +1067,5 @@ local function initialize()
 end
 
 initialize()
+
 
