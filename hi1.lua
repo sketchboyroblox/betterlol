@@ -757,18 +757,37 @@ local function sendMessage(message)
     local success = false
     local attempts = 0
     
-    while not success and attempts < 5 do
-        success = pcall(function()
+    while not success and attempts < 10 do
+        local chatReady = false
+        pcall(function()
             if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
-                TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(message)
-                return true
+                chatReady = true
             end
         end)
         
-        if not success then
+        if not chatReady then
+            wait(0.5)
             attempts = attempts + 1
-            wait(0.2)
+            if attempts == 5 then
+                print("Waiting for chat to be ready...")
+            end
+        else
+            success = pcall(function()
+                if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
+                    TextChatService.ChatInputBarConfiguration.TargetTextChannel:SendAsync(message)
+                    return true
+                end
+            end)
+            
+            if not success then
+                attempts = attempts + 1
+                wait(0.2)
+            end
         end
+    end
+    
+    if not success then
+        warn("Failed to send message after " .. attempts .. " attempts")
     end
     
     return success
@@ -1077,6 +1096,23 @@ startSpamming = function()
             end
             
             print("Game loaded, starting spam process...")
+            
+            local chatCheckAttempts = 0
+            while chatCheckAttempts < 10 do
+                local chatReady = false
+                pcall(function()
+                    if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
+                        chatReady = true
+                    end
+                end)
+                if chatReady then
+                    print("Chat confirmed ready, starting spam loop...")
+                    break
+                end
+                wait(0.5)
+                chatCheckAttempts = chatCheckAttempts + 1
+            end
+            
             local processedInThisGame = 0
             
             while processedInThisGame < maxUsersPerGame and isRunning do
@@ -1087,6 +1123,7 @@ startSpamming = function()
                     print("Processed batch " .. processedInThisGame .. "/" .. maxUsersPerGame)
                     wait(math.random(0.5, 1))
                 else
+                    print("No players found to process, waiting...")
                     wait(0.5)
                 end
             end
@@ -1134,13 +1171,14 @@ local function initialize()
         end
         
         if wasRunning and isRunning then
-            print("Resuming spam process with vanity: " .. tostring(discordVanity))
+            print("Resuming spam process with vanity: " .. tostring(discordVanity) .. ", isRunning: " .. tostring(isRunning))
             updateStatus("Running", Color3.fromRGB(50, 200, 80))
             spawn(function()
-                wait(2)
+                wait(3)
+                print("Checking if game is ready for spam process...")
                 local gameReady = false
                 local readyAttempts = 0
-                while not gameReady and readyAttempts < 20 do
+                while not gameReady and readyAttempts < 30 do
                     pcall(function()
                         if player.Character and player.Character:FindFirstChild("Humanoid") then
                             gameReady = true
@@ -1151,15 +1189,37 @@ local function initialize()
                         readyAttempts = readyAttempts + 1
                     end
                 end
+                
+                if not gameReady then
+                    warn("Game not ready after 15 seconds, attempting to start anyway...")
+                end
+                
+                print("isRunning check: " .. tostring(isRunning))
                 if isRunning then
                     print("Game ready, starting spam process...")
-                    pcall(function()
-                        if startSpamming then
+                    wait(1)
+                    
+                    local startAttempts = 0
+                    while startAttempts < 5 do
+                        if startSpamming and type(startSpamming) == "function" then
+                            print("Calling startSpamming()...")
                             startSpamming()
+                            break
+                        else
+                            wait(0.5)
+                            startAttempts = startAttempts + 1
                         end
-                    end)
+                    end
+                    
+                    if startAttempts >= 5 then
+                        warn("startSpamming function not found after 5 attempts!")
+                    end
+                else
+                    warn("Cannot start spam - isRunning is false")
                 end
             end)
+        else
+            print("Not resuming - wasRunning: " .. tostring(wasRunning) .. ", isRunning: " .. tostring(isRunning))
         end
         
         print("UI initialized successfully")
