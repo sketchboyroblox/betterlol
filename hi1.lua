@@ -665,7 +665,7 @@ end
 
 local function waitForStableConnection()
     local connectionAttempts = 0
-    while connectionAttempts < 15 do
+    while connectionAttempts < 10 do
         local connected = false
         pcall(function()
             if game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer.Character then
@@ -677,7 +677,7 @@ local function waitForStableConnection()
             break
         end
         
-        wait(0.5)
+        wait(0.2)
         connectionAttempts = connectionAttempts + 1
     end
 end
@@ -688,23 +688,17 @@ local function waitForGameLoad()
     waitForStableConnection()
     
     local attempts = 0
-    while (not player.Character or not player.Character:FindFirstChild("Humanoid")) and attempts < 40 do
-        wait(0.2)
+    while (not player.Character or not player.Character:FindFirstChild("Humanoid")) and attempts < 20 do
+        wait(0.1)
         attempts = attempts + 1
     end
     
     if not player.Character then
-        print("Character load failed - attempting restart")
-        wait(2)
-        if serverSwapEnabled and isRunning then
-            pcall(function()
-                teleportToNewServer()
-            end)
-        end
-        return false
+        print("Character load failed after " .. attempts .. " attempts - continuing anyway")
+    else
+        print("Character loaded successfully")
     end
     
-    print("Character loaded successfully")
     applyNetworkOptimizations()
     optimizeClientPerformance()
     
@@ -713,10 +707,10 @@ local function waitForGameLoad()
     forceChatFeatures()
     optimizeRendering()
     
-    wait(3)
+    wait(1)
     
     local chatAttempts = 0
-    while chatAttempts < 25 do
+    while chatAttempts < 15 do
         local chatReady = false
         pcall(function()
             if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
@@ -729,12 +723,15 @@ local function waitForGameLoad()
             break
         end
         
-        wait(0.4)
+        wait(0.3)
         chatAttempts = chatAttempts + 1
     end
     
+    if chatAttempts >= 15 then
+        print("Chat not ready after 15 attempts, continuing anyway...")
+    end
+    
     print("Game load sequence complete!")
-    wait(1)
     return true
 end
 
@@ -1082,48 +1079,36 @@ startSpamming = function()
     print("startSpamming() called - isRunning: " .. tostring(isRunning))
     spawn(function()
         pcall(function()
-            print("Waiting for game to load...")
-            local loadSuccess = waitForGameLoad()
+            print("Starting game load in background...")
+            spawn(function()
+                waitForGameLoad()
+            end)
             
-            if not loadSuccess then
-                print("Game load failed, cannot start spam process")
-                return
-            end
+            wait(2)
             
             if not isRunning then 
-                print("Spam process stopped during game load")
+                print("Spam process stopped during initialization")
                 return 
             end
             
-            print("Game loaded, starting spam process...")
-            
-            local chatCheckAttempts = 0
-            while chatCheckAttempts < 10 do
-                local chatReady = false
-                pcall(function()
-                    if TextChatService.ChatInputBarConfiguration and TextChatService.ChatInputBarConfiguration.TargetTextChannel then
-                        chatReady = true
-                    end
-                end)
-                if chatReady then
-                    print("Chat confirmed ready, starting spam loop...")
-                    break
-                end
-                wait(0.5)
-                chatCheckAttempts = chatCheckAttempts + 1
-            end
+            print("Starting spam process (chat will be checked during message sending)...")
             
             local processedInThisGame = 0
+            local noPlayersCount = 0
             
             while processedInThisGame < maxUsersPerGame and isRunning do
                 if processMultipleUsers() then
                     processedInThisGame = processedInThisGame + 1
                     usersProcessed = usersProcessed + 1
+                    noPlayersCount = 0
                     saveScriptData()
                     print("Processed batch " .. processedInThisGame .. "/" .. maxUsersPerGame)
                     wait(math.random(0.5, 1))
                 else
-                    print("No players found to process, waiting...")
+                    noPlayersCount = noPlayersCount + 1
+                    if noPlayersCount % 5 == 0 then
+                        print("No players found to process (attempt " .. noPlayersCount .. "), waiting...")
+                    end
                     wait(0.5)
                 end
             end
@@ -1174,45 +1159,46 @@ local function initialize()
             print("Resuming spam process with vanity: " .. tostring(discordVanity) .. ", isRunning: " .. tostring(isRunning))
             updateStatus("Running", Color3.fromRGB(50, 200, 80))
             spawn(function()
-                wait(3)
-                print("Checking if game is ready for spam process...")
+                wait(1)
+                print("Quick check for game readiness...")
                 local gameReady = false
                 local readyAttempts = 0
-                while not gameReady and readyAttempts < 30 do
+                while not gameReady and readyAttempts < 10 do
                     pcall(function()
                         if player.Character and player.Character:FindFirstChild("Humanoid") then
                             gameReady = true
                         end
                     end)
                     if not gameReady then
-                        wait(0.5)
+                        wait(0.2)
                         readyAttempts = readyAttempts + 1
                     end
                 end
                 
                 if not gameReady then
-                    warn("Game not ready after 15 seconds, attempting to start anyway...")
+                    print("Game not fully ready, starting spam process anyway (will wait during execution)...")
+                else
+                    print("Game ready!")
                 end
                 
                 print("isRunning check: " .. tostring(isRunning))
                 if isRunning then
-                    print("Game ready, starting spam process...")
-                    wait(1)
+                    print("Starting spam process immediately...")
                     
                     local startAttempts = 0
-                    while startAttempts < 5 do
+                    while startAttempts < 3 do
                         if startSpamming and type(startSpamming) == "function" then
                             print("Calling startSpamming()...")
                             startSpamming()
                             break
                         else
-                            wait(0.5)
+                            wait(0.2)
                             startAttempts = startAttempts + 1
                         end
                     end
                     
-                    if startAttempts >= 5 then
-                        warn("startSpamming function not found after 5 attempts!")
+                    if startAttempts >= 3 then
+                        warn("startSpamming function not found after 3 attempts!")
                     end
                 else
                     warn("Cannot start spam - isRunning is false")
