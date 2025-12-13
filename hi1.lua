@@ -688,12 +688,27 @@ local function waitForGameLoad()
     waitForStableConnection()
     
     local attempts = 0
-    while (not player.Character or not player.Character:FindFirstChild("Humanoid")) and attempts < 20 do
-        wait(0.1)
-        attempts = attempts + 1
+    local characterReady = false
+    while not characterReady and attempts < 20 do
+        pcall(function()
+            if player and player.Character and player.Character:FindFirstChild("Humanoid") then
+                characterReady = true
+            end
+        end)
+        if not characterReady then
+            wait(0.1)
+            attempts = attempts + 1
+        end
     end
     
-    if not player.Character then
+    local hasCharacter = false
+    pcall(function()
+        if player and player.Character then
+            hasCharacter = true
+        end
+    end)
+    
+    if not hasCharacter then
         print("Character load failed after " .. attempts .. " attempts - continuing anyway")
     else
         print("Character loaded successfully")
@@ -811,17 +826,34 @@ local function stopFollowing()
 end
 
 local function instantTeleportToPlayer(targetPlayer)
-    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    if not targetPlayer then
         return false
     end
     
-    local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then
+    local targetChar = nil
+    pcall(function()
+        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            targetChar = targetPlayer.Character
+        end
+    end)
+    
+    if not targetChar then
+        return false
+    end
+    
+    local character = nil
+    pcall(function()
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            character = player.Character
+        end
+    end)
+    
+    if not character then
         return false
     end
     
     pcall(function()
-        local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+        local targetPosition = targetChar.HumanoidRootPart.Position
         local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
         character.HumanoidRootPart.CFrame = CFrame.new(newPosition)
     end)
@@ -830,12 +862,29 @@ local function instantTeleportToPlayer(targetPlayer)
 end
 
 local function spinAroundPlayer(targetPlayer, duration)
-    if not targetPlayer or not targetPlayer.Character or not targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    if not targetPlayer then
         return
     end
     
-    local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then
+    local targetChar = nil
+    pcall(function()
+        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            targetChar = targetPlayer.Character
+        end
+    end)
+    
+    if not targetChar then
+        return
+    end
+    
+    local character = nil
+    pcall(function()
+        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            character = player.Character
+        end
+    end)
+    
+    if not character then
         return
     end
     
@@ -846,14 +895,15 @@ local function spinAroundPlayer(targetPlayer, duration)
     spawn(function()
         while tick() - startTime < duration and isRunning do
             pcall(function()
-                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") and
+                   player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                     local targetPos = targetPlayer.Character.HumanoidRootPart.Position
                     local angle = (tick() * speed) % (math.pi * 2)
                     local offsetX = math.cos(angle) * radius
                     local offsetZ = math.sin(angle) * radius
                     local newPosition = targetPos + Vector3.new(offsetX, 3, offsetZ)
                     local lookAtTarget = CFrame.new(newPosition, targetPos)
-                    character.HumanoidRootPart.CFrame = lookAtTarget
+                    player.Character.HumanoidRootPart.CFrame = lookAtTarget
                 end
             end)
             wait(0.03)
@@ -863,11 +913,17 @@ end
 
 local function getTopThreePlayers()
     local players = {}
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            table.insert(players, p)
+    pcall(function()
+        for _, p in pairs(Players:GetPlayers()) do
+            if p and p ~= player then
+                pcall(function()
+                    if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                        table.insert(players, p)
+                    end
+                end)
+            end
         end
-    end
+    end)
     
     local selectedPlayers = {}
     for i = 1, math.min(3, #players) do
@@ -1165,7 +1221,7 @@ local function initialize()
                 local readyAttempts = 0
                 while not gameReady and readyAttempts < 10 do
                     pcall(function()
-                        if player.Character and player.Character:FindFirstChild("Humanoid") then
+                        if player and player.Character and player.Character:FindFirstChild("Humanoid") then
                             gameReady = true
                         end
                     end)
