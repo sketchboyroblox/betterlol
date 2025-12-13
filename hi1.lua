@@ -193,7 +193,7 @@ local function createModernUI()
     vanityInput.Position = UDim2.new(0, 0, 0, 30)
     vanityInput.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
     vanityInput.BorderSizePixel = 0
-    vanityInput.Text = "/husband"
+    vanityInput.Text = discordVanity
     vanityInput.PlaceholderText = "Enter vanity (e.g., /meh)"
     vanityInput.TextColor3 = Color3.fromRGB(255, 255, 255)
     vanityInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
@@ -444,7 +444,7 @@ local function createModernUI()
         end
     end)
 
-    return screenGui, updateStatus, updateStats
+    return screenGui, updateStatus, updateStats, vanityInput
 end
 
 local function applyNetworkOptimizations()
@@ -612,11 +612,14 @@ local function loadScriptData()
             if data.discordVanity then
                 discordVanity = data.discordVanity
             end
-            return true
+            if data.wasRunning then
+                isRunning = true
+            end
+            return true, data.wasRunning or false
         end
     end
     
-    return false
+    return false, false
 end
 
 local function waitForStableConnection()
@@ -1053,19 +1056,27 @@ local function initialize()
     print("Initializing modern UI spammer...")
     
     pcall(function()
-        loadScriptData()
+        local dataLoaded, wasRunning = loadScriptData()
         initializeMessageVariations()
         
         if game.JobId and game.JobId ~= "" then
             joinedServers[game.JobId] = tick()
         end
         
-        createModernUI()
+        local screenGui, updateStatus, updateStats, vanityInput = createModernUI()
+        
+        if wasRunning and isRunning then
+            wait(3)
+            updateStatus("Running", Color3.fromRGB(50, 200, 80))
+            pcall(function()
+                if startSpamming then
+                    startSpamming()
+                end
+            end)
+        end
         
         print("UI initialized successfully")
     end)
 end
 
 initialize()
-
-
