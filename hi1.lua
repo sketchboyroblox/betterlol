@@ -696,12 +696,12 @@ local function waitForGameLoad()
     if not player.Character then
         print("Character load failed - attempting restart")
         wait(2)
-        if serverSwapEnabled then
+        if serverSwapEnabled and isRunning then
             pcall(function()
                 teleportToNewServer()
             end)
         end
-        return
+        return false
     end
     
     print("Character loaded successfully")
@@ -735,6 +735,7 @@ local function waitForGameLoad()
     
     print("Game load sequence complete!")
     wait(1)
+    return true
 end
 
 local function cleanupOldServers()
@@ -1054,13 +1055,28 @@ local function teleportToNewServer()
 end
 
 startSpamming = function()
+    if not isRunning then
+        print("Cannot start spamming - isRunning is false")
+        return
+    end
+    
+    print("startSpamming() called - isRunning: " .. tostring(isRunning))
     spawn(function()
         pcall(function()
-            waitForGameLoad()
+            print("Waiting for game to load...")
+            local loadSuccess = waitForGameLoad()
             
-            if not isRunning then return end
+            if not loadSuccess then
+                print("Game load failed, cannot start spam process")
+                return
+            end
             
-            print("Starting spam process...")
+            if not isRunning then 
+                print("Spam process stopped during game load")
+                return 
+            end
+            
+            print("Game loaded, starting spam process...")
             local processedInThisGame = 0
             
             while processedInThisGame < maxUsersPerGame and isRunning do
@@ -1081,6 +1097,8 @@ startSpamming = function()
                 saveScriptData()
                 wait(1)
                 teleportToNewServer()
+            elseif not isRunning then
+                print("Spam process stopped")
             end
         end)
     end)
@@ -1117,11 +1135,29 @@ local function initialize()
         
         if wasRunning and isRunning then
             print("Resuming spam process with vanity: " .. tostring(discordVanity))
-            wait(3)
             updateStatus("Running", Color3.fromRGB(50, 200, 80))
-            pcall(function()
-                if startSpamming then
-                    startSpamming()
+            spawn(function()
+                wait(2)
+                local gameReady = false
+                local readyAttempts = 0
+                while not gameReady and readyAttempts < 20 do
+                    pcall(function()
+                        if player.Character and player.Character:FindFirstChild("Humanoid") then
+                            gameReady = true
+                        end
+                    end)
+                    if not gameReady then
+                        wait(0.5)
+                        readyAttempts = readyAttempts + 1
+                    end
+                end
+                if isRunning then
+                    print("Game ready, starting spam process...")
+                    pcall(function()
+                        if startSpamming then
+                            startSpamming()
+                        end
+                    end)
                 end
             end)
         end
