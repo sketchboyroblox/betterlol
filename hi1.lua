@@ -829,48 +829,77 @@ local function instantTeleportToPlayer(targetPlayer)
     end
     
     local targetChar = nil
+    local targetRoot = nil
     local attempts = 0
-    while not targetChar and attempts < 10 do
+    while not targetRoot and attempts < 30 do
         pcall(function()
             if targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 targetChar = targetPlayer.Character
+                targetRoot = targetChar.HumanoidRootPart
             end
         end)
-        if not targetChar then
+        if not targetRoot then
             wait(0.2)
             attempts = attempts + 1
         end
     end
     
-    if not targetChar then
+    if not targetRoot then
         return false
     end
     
     local character = nil
+    local myRoot = nil
     attempts = 0
-    while not character and attempts < 15 do
+    while not myRoot and attempts < 40 do
         pcall(function()
             if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 character = player.Character
+                myRoot = character.HumanoidRootPart
             end
         end)
-        if not character then
+        if not myRoot then
             wait(0.2)
             attempts = attempts + 1
         end
     end
     
-    if not character then
+    if not myRoot then
         return false
     end
     
     local teleportSuccess = false
-    pcall(function()
-        local targetPosition = targetChar.HumanoidRootPart.Position
-        local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
-        character.HumanoidRootPart.CFrame = CFrame.new(newPosition)
-        teleportSuccess = true
-    end)
+    local teleportAttempts = 0
+    while not teleportSuccess and teleportAttempts < 3 do
+        pcall(function()
+            local targetPosition = targetRoot.Position
+            local newPosition = targetPosition + Vector3.new(math.random(-2, 2), 8, math.random(-2, 2))
+            
+            if myRoot and myRoot.Parent then
+                myRoot.CFrame = CFrame.new(newPosition)
+                wait(0.1)
+                
+                local distance = (myRoot.Position - targetPosition).Magnitude
+                if distance < 20 then
+                    teleportSuccess = true
+                else
+                    teleportAttempts = teleportAttempts + 1
+                    if teleportAttempts < 3 then
+                        wait(0.2)
+                    end
+                end
+            else
+                teleportAttempts = teleportAttempts + 1
+                if teleportAttempts < 3 then
+                    wait(0.2)
+                end
+            end
+        end)
+        
+        if not teleportSuccess and teleportAttempts >= 3 then
+            break
+        end
+    end
     
     return teleportSuccess
 end
@@ -963,17 +992,19 @@ local function processMultipleUsers()
     
     for _, targetPlayer in ipairs(targetPlayers) do
         spawn(function()
+            print("Attempting to teleport to " .. targetPlayer.Name .. "...")
             local teleported = false
+            local teleportError = nil
             pcall(function()
                 teleported = instantTeleportToPlayer(targetPlayer)
             end)
             
             if teleported then
-                print("Teleported to " .. targetPlayer.Name)
+                print("Successfully teleported to " .. targetPlayer.Name)
                 wait(0.1)
                 spinAroundPlayer(targetPlayer, 2.5)
             else
-                print("Could not teleport to " .. targetPlayer.Name .. ", sending messages anyway")
+                print("Could not teleport to " .. targetPlayer.Name .. " (character may not be loaded), sending messages anyway")
             end
             
             local selectedMessages = getRandomMessages()
