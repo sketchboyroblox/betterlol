@@ -217,7 +217,7 @@ local function createModernUI()
     vanityInput.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
     vanityInput.BorderSizePixel = 0
     vanityInput.Text = discordVanity
-    vanityInput.PlaceholderText = "Enter vanity (e.g., /carlos)"
+    vanityInput.PlaceholderText = "Enter vanity (e.g., /carols)"
     vanityInput.TextColor3 = Color3.fromRGB(255, 255, 255)
     vanityInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
     vanityInput.TextSize = 14
@@ -235,7 +235,7 @@ local function createModernUI()
     vanityStroke.Parent = vanityInput
 
     vanityInput.FocusLost:Connect(function()
-        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/carlos"
+        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/carols"
         pcall(function()
             if initializeMessageVariations then
                 initializeMessageVariations()
@@ -1364,5 +1364,6 @@ local function initialize()
 end
 
 initialize()
+
 
 
