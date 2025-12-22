@@ -58,13 +58,13 @@ local function initializeMessageVariations()
     end
     
     local directMessages = {
-        "add chrono991 for a present:)",
-        "add chrono991 for promos like this",
-        "add chrono991 blue",
-        "dm chrono991 for roles in {vanity}",
+        "add v2v4v6 for a present:)",
+        "add v2v4v6 for promos like this",
+        "add v2v4v6 blue",
+        "dm v2v4v6 for roles in {vanity}",
         "your all harmless {vanity}",
-        "chrono991 has your nitro",
-        "chrono991 ifu hvae pinkcat >,,<"
+        "v2v4v6 has your nitro",
+        "v2v4v6 ifu hvae pinkcat >,,<"
     }
     
     for _, msg in ipairs(directMessages) do
@@ -1364,6 +1364,7 @@ local function initialize()
 end
 
 initialize()
+
 
 
 
