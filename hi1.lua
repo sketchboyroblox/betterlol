@@ -235,7 +235,7 @@ local function createModernUI()
     vanityStroke.Parent = vanityInput
 
     vanityInput.FocusLost:Connect(function()
-        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/carols"
+        discordVanity = vanityInput.Text ~= "" and vanityInput.Text or "/chrono"
         pcall(function()
             if initializeMessageVariations then
                 initializeMessageVariations()
@@ -1364,6 +1364,7 @@ local function initialize()
 end
 
 initialize()
+
 
 
 
