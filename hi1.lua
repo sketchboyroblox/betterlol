@@ -44,7 +44,9 @@ local function initializeMessageVariations()
         "tight pinkcat in {vanity}",
         "ageplayers are in {vanity} >.<",
         "#1 com {vanity}",
-        "com stages in {vanity}"
+        "com stages in {vanity}",
+        "com stages in t.me/socialblah",
+        "why she wet on stage in t.me/socialblah"
     }
     
     messageVariations = {}
@@ -64,7 +66,10 @@ local function initializeMessageVariations()
         "dm xyz33 for roles in {vanity}",
         "your all harmless {vanity}",
         "xyz33 has your nitro",
-        "xyz33 ifu hvae pinkcat >,,<"
+        "xyz33 ifu hvae pinkcat >,,<",
+        "free depos for pinkcat in t.me/socialblah",
+        "your harmless lmk t.me/socialblah",
+        "hes giving out free $$$ t.me/socialblah"
     }
     
     for _, msg in ipairs(directMessages) do
@@ -1364,6 +1369,7 @@ local function initialize()
 end
 
 initialize()
+
 
 
 
